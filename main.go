@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 )
 
 func testPanic1() {
@@ -25,11 +23,6 @@ func testPanic3() {
 }
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-	readString, _ := reader.ReadString('\n')
-	//fmt.Println(n)
-
-	fmt.Println(readString)
 
 }
 
@@ -46,14 +39,14 @@ type MyStruct struct {
 }
 
 // 值接收者实现 MethodA
-func (s *MyStruct) MethodA() {
+func (s MyStruct) MethodA() {
 	fmt.Println("MethodA (value receiver)")
 }
 
 // 指针接收者实现 MethodB
-func (s *MyStruct) MethodB() {
-	fmt.Println("MethodB (pointer receiver)")
-}
+//func (s MyStruct) MethodB() {
+//	fmt.Println("MethodB (pointer receiver)")
+//}
 
 type MyInterface interface {
 	MethodA() // 由值接收者实现
@@ -67,7 +60,7 @@ type MyInterface2 interface {
 }
 
 func Func(inter MyInterface) {
-	inter.MethodB()
+	inter.MethodA()
 	fmt.Println("aaaa")
 
 }

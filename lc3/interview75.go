@@ -1,6 +1,4 @@
-package lc3
-
-import "slices"
+package main
 
 func dailyTemperatures(temperatures []int) []int {
 	ans := make([]int, len(temperatures))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/heap"
 	"maps"
 	"math"
 	"slices"
@@ -1330,39 +1331,7 @@ func maxProfit3(prices []int) int {
 	return dp[n][3][0]
 }
 
-func minWindow(s string, t string) string {
-	mp := map[byte]int{}
-	les := 0
-	for i := range t {
-		mp[t[i]]++
-		if mp[t[i]] == 1 {
-			les++
-		}
-	}
-	l, ansl, ansr := 0, 0, len(s)
-	for r := range s {
-		mp[s[r]]--
-		if mp[s[r]] == 0 {
-			les--
-			for les == 0 {
-				if ansr-ansl > r-l {
-					ansr, ansl = r, l
-				}
-				mp[s[l]]++
-				if mp[s[l]] == 1 {
-					les++
-				}
-				l++
-			}
-		}
-	}
-	if ansr-ansl == len(s) {
-		return ""
-	}
-	return s[ansl : ansr+1]
-}
-
-func canPartitionKSubsets(nums []int, k int) bool {
+func canPartitionKSubsets(nums []int, k int) (ans bool) {
 	sum := 0
 	for i := range nums {
 		sum += nums[i]
@@ -1370,8 +1339,239 @@ func canPartitionKSubsets(nums []int, k int) bool {
 	if sum%k != 0 {
 		return false
 	}
-	var dfs func(idx int, curSum int)
-	dfs = func(idx int, curSum int) {
-
+	sort.Ints(nums)
+	used := make([]bool, len(nums))
+	target := sum / k
+	n := len(nums)
+	if nums[0] > target || nums[n-1] > target {
+		return false
 	}
+	var dfs func(idx int, count int, curSum int) bool
+	dfs = func(idx int, count int, curSum int) bool {
+		if count == k-1 {
+			return true
+		}
+		if curSum == target {
+			return dfs(0, count+1, 0)
+		}
+		for i := idx; i < n; i++ {
+			if used[i] || curSum+nums[i] > target {
+				continue
+			}
+			used[i] = true
+			res := dfs(idx+1, count, curSum+nums[i])
+			if res {
+				return true
+			}
+			used[i] = false
+			if curSum == 0 {
+				return false
+			}
+
+		}
+		return false
+	}
+
+	return dfs(0, 0, 0)
+}
+
+type Node struct {
+	Val    int
+	Next   *Node
+	Random *Node
+}
+
+func copyRandomList(head *Node) *Node {
+	nodeMap := map[*Node]*Node{}
+	cur := head
+	for cur != nil {
+		newNode := &Node{Val: cur.Val}
+		nodeMap[cur] = newNode
+		cur = cur.Next
+	}
+	cur = head
+	for cur != nil {
+		newNode := nodeMap[cur]
+		newNode.Next = nodeMap[cur.Next]
+		newNode.Random = nodeMap[cur.Random]
+		cur = cur.Next
+	}
+	return nodeMap[head]
+}
+
+func combinationSum(candidates []int, target int) (ans [][]int) {
+	sort.Ints(candidates)
+	if candidates[0] > target {
+		return
+	}
+	path := []int{}
+	var dfs func(idx, sum int)
+	dfs = func(idx, sum int) {
+		if sum == target {
+			ans = append(ans, append([]int{}, path...))
+			return
+		}
+		if candidates[idx]+sum > target {
+			return
+		}
+		path = append(path, candidates[idx])
+		dfs(idx, sum+candidates[idx])
+		path = path[:len(path)-1]
+		if idx+1 < len(candidates) {
+			dfs(idx+1, sum)
+		}
+	}
+	dfs(0, 0)
+	return
+}
+
+type LRUCache struct {
+	kvMap map[int]*dNode
+	cap   int
+	len   int
+	dummy *dNode
+}
+
+type dNode struct {
+	Key  int
+	Val  int
+	pre  *dNode
+	next *dNode
+}
+
+func Constructor(capacity int) LRUCache {
+	dummy := &dNode{} // 先创建dummy节点
+	dummy.pre, dummy.next = dummy, dummy
+	lru := LRUCache{cap: capacity, kvMap: map[int]*dNode{}, dummy: dummy}
+	return lru
+}
+
+func (cache *LRUCache) Get(key int) int {
+	node, _ := cache.kvMap[key]
+	if node == nil {
+		return -1
+	}
+
+	if node.pre == cache.dummy {
+		return node.Val
+	}
+
+	node.pre.next = node.next
+	node.next.pre = node.pre
+
+	node.next = cache.dummy.next
+	cache.dummy.next.pre = node
+	cache.dummy.next = node
+	node.pre = cache.dummy
+
+	return node.Val
+}
+
+func (cache *LRUCache) Put(key int, value int) {
+	if cache.kvMap[key] != nil {
+		node := cache.kvMap[key]
+		node.Val = value
+		node.pre.next = node.next
+		node.next.pre = node.pre
+
+		node.next = cache.dummy.next
+		cache.dummy.next.pre = node
+		cache.dummy.next = node
+		node.pre = cache.dummy
+		return
+	}
+
+	newNode := &dNode{Val: value, Key: key}
+	cache.kvMap[key] = newNode
+	if cache.len < cache.cap {
+		cache.len++
+	} else {
+		lastNode := cache.dummy.pre
+		cache.dummy.pre = lastNode.pre
+		lastNode.pre.next = lastNode.next
+		delete(cache.kvMap, lastNode.Key)
+	}
+	newNode.next = cache.dummy.next
+	cache.dummy.next.pre = newNode
+	cache.dummy.next = newNode
+	newNode.pre = cache.dummy
+}
+
+func isValidBST2(root *TreeNode) bool {
+	pre := math.MinInt
+	var inorder func(node *TreeNode) bool
+	inorder = func(node *TreeNode) bool {
+		if node == nil {
+			return true
+		}
+		lres := inorder(node.Left)
+		if !lres || node.Val <= pre {
+			return false
+		}
+		pre = node.Val
+		return inorder(node.Right)
+	}
+	return inorder(root)
+}
+
+func minDistance(word1 string, word2 string) int {
+	m, n := len(word1), len(word2)
+	dp := make([][]int, m+1)
+	for i := range dp {
+		dp[i] = make([]int, n+1)
+		dp[i][0] = i
+	}
+	for j := range dp[0] {
+		dp[0][j] = j
+	}
+	for i := range word1 {
+		for j := range word2 {
+			if word1[i] == word2[j] {
+				dp[i+1][j+1] = dp[i][j]
+			} else {
+				dp[i+1][j+1] = max(dp[i+1][j], dp[i][j+1]) + 1
+			}
+		}
+	}
+	return dp[m][n]
+}
+
+type Heap []int
+
+func (h Heap) Len() int {
+	return len(h)
+}
+
+func (h Heap) Less(i, j int) bool {
+	return h[i] < h[j]
+}
+
+func (h Heap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
+
+func (hp *Heap) Pop() any {
+	h := *hp
+	x := h[len(h)-1]
+	h = h[:len(h)-1]
+	return x
+}
+
+func (hp *Heap) Push(x any) {
+	h := *hp
+	h = append(h, x.(int))
+	*hp = h
+}
+
+func findKthLargest(nums []int, k int) int {
+	hp := &Heap{}
+	for i := range nums {
+		heap.Push(hp, nums[i])
+		if hp.Len() > k {
+			heap.Pop(hp)
+		}
+	}
+
+	x := heap.Pop(hp).(int)
+	return x
 }
